@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using vki_schedule_telegram;
+using vki_schedule_telegram.Configurations;
 using vki_schedule_telegram.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,7 @@ var botConfig = builder.Configuration.GetSection("BotConfiguration").Get<BotConf
 // Some of them could be found in this article https://andrewlock.net/running-async-tasks-on-app-startup-in-asp-net-core-part-1/
 // We are going to use IHostedService to add and later remove Webhook
 builder.Services.AddHostedService<ConfigureWebhook>();
+builder.Services.AddHostedService<ParserUpdate>();
 
 // Register named HttpClient to get benefits of IHttpClientFactory
 // and consume it with ITelegramBotClient typed client.
@@ -19,8 +21,9 @@ builder.Services.AddHostedService<ConfigureWebhook>();
 builder.Services.AddHttpClient("tgwebhook")
     .AddTypedClient<ITelegramBotClient>(httpClient => new TelegramBotClient(botConfig.BotToken, httpClient));
 
-// Dummy business-logic service
+// Business-logic services
 builder.Services.AddScoped<HandleUpdateService>();
+builder.Services.AddScoped<ParserService>();
 
 // The Telegram.Bot library heavily depends on Newtonsoft.Json library to deserialize
 // incoming webhook updates and send serialized responses back.
