@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
+using vki_schedule_telegram.Configurations;
 
 namespace vki_schedule_telegram.Services;
 
