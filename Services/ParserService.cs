@@ -1,56 +1,43 @@
-﻿namespace vki_schedule_telegram.Services;
+﻿using vki_schedule_telegram.Models;
 
+namespace vki_schedule_telegram.Services;
 public class ParserService
 {
     private readonly ILogger<ParserService> _logger;
+    public const string Schedule = "schedule";
+
     public ParserService(ILogger<ParserService> logger)
     {
         _logger = logger;
     }
-    public async Task<List<List<string>>> GetPDFs(string url)
+    
+    public async Task<Parsed> GetSchedule()
     {
-        var list = new List<List<string>>();
-        var doc = await GetDoc(url);
-        if (doc == null) 
+        return new Parsed()
         {
-            _logger.LogWarning("Документ is null URl: {Url}", url);
-            return list;
-        }
-        foreach (HtmlAgilityPack.HtmlNode i in doc.DocumentNode.SelectNodes(".//div[@class='file-div']"))
-        {
-            var name = i.SelectSingleNode(".//div[@class='file-name']").InnerText.Trim();
-            var link = "https://ci.nsu.ru" + i.SelectSingleNode(".//a").GetAttributeValue("href", "");
-            list.Add(new List<string> { name, link });
-        }
-        return list;
+            Name = Schedule, 
+            Data = await GetPDFs("https://ci.nsu.ru/education/schedule/")
+        };
     }
-    public async Task<List<List<string>>> GetSchedule(string url)
+
+    private async Task<List<Pdf>> GetPDFs(string _url)
     {
-        var list = new List<List<string>>();
-        var doc = await GetDoc(url);
+        var doc = await GetDocAsync(_url);
+        var list = new List<Pdf>();
         if (doc == null)
         {
-            _logger.LogWarning("Документ is null URl: {Url}", url);
+            _logger.LogError($"Документ is null URl: {_url}");
             return list;
         }
-        var ctr = 0;
-        foreach (var i in doc.DocumentNode.SelectSingleNode(".//table[@class='table']").SelectNodes(".//tr"))
+        foreach (var node in doc.DocumentNode.SelectNodes(".//div[@class='file-div']"))
         {
-            list.Add(new List<string>());
-            foreach (var j in i.SelectNodes(".//p"))
-            {
-                list[ctr].Add(j.InnerText.Trim());
-            }
-            ctr++;
+            var name = node.SelectSingleNode(".//div[@class='file-name']").InnerText.Trim();
+            var url = "https://ci.nsu.ru" + node.SelectSingleNode(".//a").GetAttributeValue("href", "");
+            list.Add(new Pdf() { Name = name, Url = url});
         }
-        list = list
-            .SelectMany(inner => inner.Select((item, index) => new { item, index }))
-            .GroupBy(i => i.index, i => i.item)
-            .Select(g => g.ToList())
-            .ToList();
         return list;
     }
-    private Task<string>? GetHtml(string url)
+    private Task<string>? GetHtmlAsync(string url)
     {
         var html = string.Empty;
         using (var hdl = new HttpClientHandler { 
@@ -67,7 +54,7 @@ public class ParserService
                         html = resp.Content.ReadAsStringAsync().Result;
                         if (string.IsNullOrEmpty(html))
                         {
-                            _logger.LogWarning("{Url}:\\nHtml is Null or Empty", url);
+                            _logger.LogError("{Url}\\nHtml is Null or Empty", url);
                         }
                     }
                 }
@@ -75,10 +62,10 @@ public class ParserService
         }
         return Task.FromResult(html);
     }
-    private async Task<HtmlAgilityPack.HtmlDocument?> GetDoc(string url)
+    private async Task<HtmlAgilityPack.HtmlDocument?> GetDocAsync(string url)
     {
         HtmlAgilityPack.HtmlDocument doc = new();
-        var html = await GetHtml(url)!;
+        var html = await GetHtmlAsync(url)!;
         if (string.IsNullOrEmpty(html)) return null;
         doc.LoadHtml(html);
         return doc;

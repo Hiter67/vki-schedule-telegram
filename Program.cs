@@ -23,7 +23,10 @@ builder.Services.AddHttpClient("tgwebhook")
 
 // Business-logic services
 builder.Services.AddScoped<HandleUpdateService>();
-builder.Services.AddScoped<ParserService>();
+
+builder.Services.AddSingleton<ParserService>();
+
+builder.Services.AddTransient<MongoService>();
 
 // The Telegram.Bot library heavily depends on Newtonsoft.Json library to deserialize
 // incoming webhook updates and send serialized responses back.
